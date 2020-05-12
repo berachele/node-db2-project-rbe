@@ -16,9 +16,14 @@ router.get('/', (req, res) => {
 
 router.get('/:id', (req, res) => {
     const {id} = req.params
-    db("cars").where({id}).first()
+    db("cars").where({id})
+    .first()
     .then(car => {
-        res.status(200).json({data: car})
+        if(!car){
+            res.status(400).json({error: "Car not found by that ID"})
+        }else{
+            res.status(200).json(car)
+        }
     })
     .catch(err => {
         console.log({err})
@@ -27,17 +32,35 @@ router.get('/:id', (req, res) => {
 })
 
 router.post('/', (req, res) => {
-    db("cars")
-    .then()
-    .catch(err => {
-        console.log({err})
-        res.status(500).json({ message: "There was an error retrieving the data"})
-    })
+    const car = req.body
+    if(isValidCar(car)){
+        db("cars")
+        .insert(car)
+        .then(newCar => {
+            res.status(201).json({success: `created '${car.make} ${car.model}'`})
+        })
+        .catch(err => {
+            console.log({err})
+            res.status(500).json({ message: "There was an error retrieving the data"})
+        })
+    }else {
+        res.status(400).json({message: "Please provide VIN, make and model of the car"})
+    }
+    
 })
 
 router.put('/:id', (req, res) => {
-    db("cars")
-    .then()
+    const editCar = req.body
+    const {id} = req.params
+    db("cars").where({id})
+    .update(editCar)
+    .then(car => {
+        if(car > 0){
+            res.status(200).json({success: `Updated '${editCar.make} ${editCar.model}'`})
+        }else{
+            res.status(404).json({error: "Car not found by that ID"})
+        }
+    })
     .catch(err => {
         console.log({err})
         res.status(500).json({ message: "There was an error retrieving the data"})
@@ -45,12 +68,24 @@ router.put('/:id', (req, res) => {
 })
 
 router.delete('/:id', (req, res) => {
-    db("cars")
-    .then()
+    const {id} = req.params
+    db("cars").where({id})
+    .del()
+    .then(car => {
+        if(car > 0){
+            res.status(200).json({success: `Car with id: ${id} was deleted`})
+        }else{
+            res.status(404).json({error: "Car not found by that ID"})
+        }
+    })
     .catch(err => {
         console.log({err})
         res.status(500).json({ message: "There was an error retrieving the data"})
     })
 })
+
+function isValidCar(car){
+    return Boolean(car.make && car.model)
+}
 
 module.exports = router
